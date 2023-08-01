@@ -246,7 +246,7 @@ xb_opcode_cmp_str(XbOpcode *self)
 gboolean
 xb_opcode_is_binding(XbOpcode *self)
 {
-	return _xb_opcode_has_flag(self, XB_OPCODE_FLAG_BOUND);
+	return _xb_opcode_is_binding(self);
 }
 
 /**

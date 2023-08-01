@@ -128,6 +128,12 @@ _xb_opcode_cmp_val(XbOpcode *self)
 	       self->kind == XB_OPCODE_KIND_BOUND_INTEGER;
 }
 
+static inline gboolean
+_xb_opcode_is_binding(const XbOpcode *self)
+{
+	return _xb_opcode_has_flag(self, XB_OPCODE_FLAG_BOUND);
+}
+
 G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(XbOpcode, xb_opcode_clear)
 
 G_END_DECLS
