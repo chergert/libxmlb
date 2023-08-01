@@ -161,6 +161,19 @@ _xb_stack_push_bool(XbStack *self, gboolean val, GError **error)
 	return TRUE;
 }
 
+/* Push two opcodes onto the stack with appropriate rollback on failure. */
+static inline gboolean
+_xb_stack_push_two(XbStack *opcodes, XbOpcode **op1, XbOpcode **op2, GError **error)
+{
+	if (!_xb_stack_push(opcodes, op1, error))
+		return FALSE;
+	if (!_xb_stack_push(opcodes, op2, error)) {
+		_xb_stack_pop(opcodes, NULL, NULL);
+		return FALSE;
+	}
+	return TRUE;
+}
+
 static inline guint
 _xb_stack_get_size(XbStack *self)
 {

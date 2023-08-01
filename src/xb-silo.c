@@ -1157,19 +1157,6 @@ xb_silo_create_node(XbSilo *self, XbSiloNode *sn, gboolean force_node_cache)
 	return n;
 }
 
-/* Push two opcodes onto the stack with appropriate rollback on failure. */
-static gboolean
-_xb_stack_push_two(XbStack *opcodes, XbOpcode **op1, XbOpcode **op2, GError **error)
-{
-	if (!xb_stack_push(opcodes, op1, error))
-		return FALSE;
-	if (!xb_stack_push(opcodes, op2, error)) {
-		xb_stack_pop(opcodes, NULL, NULL);
-		return FALSE;
-	}
-	return TRUE;
-}
-
 /* convert [2] to position()=2 */
 static gboolean
 xb_silo_machine_fixup_position_cb(XbMachine *self,
