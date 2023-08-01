@@ -1526,8 +1526,8 @@ xb_silo_machine_func_search_cb(XbMachine *self,
 		return FALSE;
 
 	/* TOKN:TOKN */
-	if (xb_opcode_has_flag(&op1, XB_OPCODE_FLAG_TOKENIZED) &&
-	    xb_opcode_has_flag(&op2, XB_OPCODE_FLAG_TOKENIZED)) {
+	if (_xb_opcode_has_flag(&op1, XB_OPCODE_FLAG_TOKENIZED) &&
+	    _xb_opcode_has_flag(&op2, XB_OPCODE_FLAG_TOKENIZED)) {
 		return xb_stack_push_bool(
 		    stack,
 		    xb_string_searchv(xb_opcode_get_tokens(&op2), xb_opcode_get_tokens(&op1)),
