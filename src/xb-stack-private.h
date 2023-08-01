@@ -76,4 +76,95 @@ xb_stack_peek_tail(XbStack *self);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(XbStack, xb_stack_unref)
 
+static inline XbOpcode *
+_xb_stack_peek(const XbStack *self, guint idx)
+{
+	if (idx >= self->pos)
+		return NULL;
+	return &self->opcodes[idx];
+}
+
+static inline gboolean
+_xb_stack_pop(XbStack *self, XbOpcode *opcode_out, GError **error)
+{
+	if G_UNLIKELY(self->pos == 0) {
+		if (error != NULL)
+			g_set_error(error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA, "stack is empty");
+		return FALSE;
+	}
+	self->pos--;
+	if (opcode_out != NULL)
+		*opcode_out = self->opcodes[self->pos];
+	return TRUE;
+}
+
+static inline gboolean
+_xb_stack_pop_two(XbStack *self, XbOpcode *opcode1_out, XbOpcode *opcode2_out, GError **error)
+{
+	if G_UNLIKELY(self->pos < 2) {
+		if (error != NULL)
+			g_set_error_literal(error,
+					    G_IO_ERROR,
+					    G_IO_ERROR_INVALID_DATA,
+					    "stack is not full enough");
+		return FALSE;
+	}
+	if (opcode1_out != NULL)
+		*opcode1_out = self->opcodes[self->pos - 1];
+	if (opcode2_out != NULL)
+		*opcode2_out = self->opcodes[self->pos - 2];
+	self->pos -= 2;
+	return TRUE;
+}
+
+static inline XbOpcode *
+_xb_stack_peek_head(const XbStack *self)
+{
+	if (self->pos == 0)
+		return NULL;
+	return &self->opcodes[0];
+}
+
+static inline XbOpcode *
+_xb_stack_peek_tail(const XbStack *self)
+{
+	if (self->pos == 0)
+		return NULL;
+	return &self->opcodes[self->pos - 1];
+}
+
+static inline gboolean
+_xb_stack_push(XbStack *self, XbOpcode **opcode_out, GError **error)
+{
+	if G_UNLIKELY (self->pos >= self->max_size) {
+		*opcode_out = NULL;
+		if (error != NULL)
+			g_set_error(error,
+				    G_IO_ERROR,
+				    G_IO_ERROR_NO_SPACE,
+				    "stack is already at maximum size of %u",
+				    self->max_size);
+		return FALSE;
+	}
+
+	*opcode_out = &self->opcodes[self->pos++];
+	return TRUE;
+}
+
+static inline gboolean
+_xb_stack_push_bool(XbStack *self, gboolean val, GError **error)
+{
+	XbOpcode *op;
+	if (!_xb_stack_push(self, &op, error))
+		return FALSE;
+	xb_opcode_bool_init(op, val);
+	return TRUE;
+}
+
+static inline guint
+_xb_stack_get_size(XbStack *self)
+{
+	return self->pos;
+}
+
 G_END_DECLS
