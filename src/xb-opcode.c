@@ -192,7 +192,7 @@ xb_opcode_get_kind(XbOpcode *self)
 gboolean
 xb_opcode_has_flag(XbOpcode *self, XbOpcodeFlags flag)
 {
-	return (self->kind & flag) > 0;
+	return _xb_opcode_has_flag(self, flag);
 }
 
 /**
@@ -239,14 +239,14 @@ xb_opcode_cmp_val(XbOpcode *self)
 inline gboolean
 xb_opcode_cmp_str(XbOpcode *self)
 {
-	return xb_opcode_has_flag(self, XB_OPCODE_FLAG_TEXT);
+	return _xb_opcode_has_flag(self, XB_OPCODE_FLAG_TEXT);
 }
 
 /* private */
 gboolean
 xb_opcode_is_binding(XbOpcode *self)
 {
-	return xb_opcode_has_flag(self, XB_OPCODE_FLAG_BOUND);
+	return _xb_opcode_has_flag(self, XB_OPCODE_FLAG_BOUND);
 }
 
 /**
