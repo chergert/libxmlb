@@ -85,6 +85,7 @@ typedef enum {
 	PROP_ENABLE_NODE_CACHE,
 } XbSiloProperty;
 
+gint _XbSilo_data_offset;
 static GParamSpec *obj_props[PROP_ENABLE_NODE_CACHE + 1] = {
     NULL,
 };
@@ -215,7 +216,7 @@ xb_silo_strtab_index_lookup(XbSilo *self, const gchar *str)
 }
 
 /* private */
-inline XbSiloNode *
+XbSiloNode *
 xb_silo_get_node(XbSilo *self, guint32 off)
 {
 	XbSiloPrivate *priv = GET_PRIVATE(self);
@@ -247,7 +248,7 @@ xb_silo_get_root_node(XbSilo *self)
 		return NULL;
 	if (g_bytes_get_size(priv->blob) <= sizeof(XbSiloHeader))
 		return NULL;
-	return xb_silo_get_node(self, sizeof(XbSiloHeader));
+	return _xb_silo_get_node(self, sizeof(XbSiloHeader));
 }
 
 /* private */
@@ -256,7 +257,7 @@ xb_silo_get_parent_node(XbSilo *self, XbSiloNode *n)
 {
 	if (n->parent == 0x0)
 		return NULL;
-	return xb_silo_get_node(self, n->parent);
+	return _xb_silo_get_node(self, n->parent);
 }
 
 /* private */
@@ -265,7 +266,7 @@ xb_silo_get_next_node(XbSilo *self, XbSiloNode *n)
 {
 	if (n->next == 0x0)
 		return NULL;
-	return xb_silo_get_node(self, n->next);
+	return _xb_silo_get_node(self, n->next);
 }
 
 /* private */
@@ -277,7 +278,7 @@ xb_silo_get_child_node(XbSilo *self, XbSiloNode *n)
 	off += xb_silo_node_get_size(n);
 
 	/* check for sentinel */
-	c = xb_silo_get_node(self, off);
+	c = _xb_silo_get_node(self, off);
 	if (!xb_silo_node_has_flag(c, XB_SILO_NODE_FLAG_IS_ELEMENT))
 		return NULL;
 	return c;
@@ -345,7 +346,7 @@ xb_silo_to_string(XbSilo *self, GError **error)
 	g_string_append_printf(str, "strtab:       @%" G_GUINT32_FORMAT "\n", hdr->strtab);
 	g_string_append_printf(str, "strtab_ntags: %" G_GUINT16_FORMAT "\n", hdr->strtab_ntags);
 	while (off < priv->strtab) {
-		XbSiloNode *n = xb_silo_get_node(self, off);
+		XbSiloNode *n = _xb_silo_get_node(self, off);
 		if (xb_silo_node_has_flag(n, XB_SILO_NODE_FLAG_IS_ELEMENT)) {
 			guint32 idx;
 			g_string_append_printf(str, "NODE @%" G_GUINT32_FORMAT "\n", off);
@@ -499,7 +500,7 @@ xb_silo_get_size(XbSilo *self)
 	g_return_val_if_fail(XB_IS_SILO(self), 0);
 
 	while (off < priv->strtab) {
-		XbSiloNode *n = xb_silo_get_node(self, off);
+		XbSiloNode *n = _xb_silo_get_node(self, off);
 		if (xb_silo_node_has_flag(n, XB_SILO_NODE_FLAG_IS_ELEMENT))
 			nodes_cnt += 1;
 		off += xb_silo_node_get_size(n);
@@ -613,7 +614,7 @@ xb_silo_get_node_depth(XbSilo *self, XbSiloNode *n)
 	guint depth = 0;
 	while (n->parent != 0) {
 		depth++;
-		n = xb_silo_get_node(self, n->parent);
+		n = _xb_silo_get_node(self, n->parent);
 	}
 	return depth;
 }
@@ -1782,6 +1783,11 @@ xb_silo_class_init(XbSiloClass *klass)
 	    G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS | G_PARAM_EXPLICIT_NOTIFY);
 
 	g_object_class_install_properties(object_class, G_N_ELEMENTS(obj_props), obj_props);
+
+  /* Used to inline access to the data by index so we can avoid
+   * roundtripping through the Private struct.
+   */
+  _XbSilo_data_offset = XbSilo_private_offset + G_STRUCT_OFFSET(XbSiloPrivate, data);
 }
 
 /**

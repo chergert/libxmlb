@@ -232,7 +232,7 @@ xb_silo_query_section_root(XbSilo *self,
 		}
 		if (sn->next == 0x0)
 			break;
-		sn = xb_silo_get_node(self, sn->next);
+		sn = _xb_silo_get_node(self, sn->next);
 	} while (TRUE);
 	return TRUE;
 }

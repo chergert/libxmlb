@@ -81,4 +81,13 @@ xb_silo_uninvalidate(XbSilo *self);
 XbSiloProfileFlags
 xb_silo_get_profile_flags(XbSilo *self);
 
+extern gint _XbSilo_data_offset;
+
+static inline XbSiloNode *
+_xb_silo_get_node(const XbSilo *self, guint32 off)
+{
+	const guint8 **data = (gconstpointer)((gintptr)self + _XbSilo_data_offset);
+	return (XbSiloNode *)((*data) + off);
+}
+
 G_END_DECLS
