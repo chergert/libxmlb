@@ -1166,7 +1166,7 @@ xb_silo_machine_fixup_position_cb(XbMachine *self,
 {
 	XbOpcode *op1;
 	XbOpcode *op2;
-	XbOpcode *tail = xb_stack_peek_tail(opcodes);
+	XbOpcode *tail = _xb_stack_peek_tail(opcodes);
 
 	if (!_xb_stack_push_two(opcodes, &op1, &op2, error))
 		return FALSE;
@@ -1192,7 +1192,7 @@ xb_silo_machine_fixup_attr_exists_cb(XbMachine *self,
 {
 	XbOpcode *op1;
 	XbOpcode *op2;
-	XbOpcode *tail = xb_stack_peek_tail(opcodes);
+	XbOpcode *tail = _xb_stack_peek_tail(opcodes);
 
 	if (!_xb_stack_push_two(opcodes, &op1, &op2, error))
 		return FALSE;
@@ -1311,7 +1311,7 @@ xb_silo_machine_func_stem_cb(XbMachine *self,
 	const gchar *str;
 	g_auto(XbOpcode) op = XB_OPCODE_INIT();
 
-	head = xb_stack_peek_head(stack);
+	head = _xb_stack_peek_head(stack);
 	if (head == NULL || !xb_opcode_cmp_str(head)) {
 		if (error != NULL)
 			g_set_error(error,
@@ -1427,7 +1427,7 @@ xb_silo_machine_func_first_cb(XbMachine *self,
 					    "cannot optimize: no silo to query");
 		return FALSE;
 	}
-	return xb_stack_push_bool(stack, query_data->position == 1, error);
+	return _xb_stack_push_bool(stack, query_data->position == 1, error);
 }
 
 static gboolean
@@ -1449,7 +1449,7 @@ xb_silo_machine_func_last_cb(XbMachine *self,
 					    "cannot optimize: no silo to query");
 		return FALSE;
 	}
-	return xb_stack_push_bool(stack, query_data->sn->next == 0, error);
+	return _xb_stack_push_bool(stack, query_data->sn->next == 0, error);
 }
 
 static gboolean
@@ -1491,9 +1491,9 @@ xb_silo_machine_func_search_cb(XbMachine *self,
 	g_auto(XbOpcode) op1 = XB_OPCODE_INIT();
 	g_auto(XbOpcode) op2 = XB_OPCODE_INIT();
 
-	if (xb_stack_get_size(stack) >= 2) {
-		head1 = xb_stack_peek(stack, xb_stack_get_size(stack) - 1);
-		head2 = xb_stack_peek(stack, xb_stack_get_size(stack) - 2);
+	if (_xb_stack_get_size(stack) >= 2) {
+		head1 = _xb_stack_peek(stack, _xb_stack_get_size(stack) - 1);
+		head2 = _xb_stack_peek(stack, _xb_stack_get_size(stack) - 2);
 	}
 	if (head1 == NULL || !xb_opcode_cmp_str(head1) || head2 == NULL ||
 	    !xb_opcode_cmp_str(head2)) {
@@ -1515,7 +1515,7 @@ xb_silo_machine_func_search_cb(XbMachine *self,
 	/* TOKN:TOKN */
 	if (_xb_opcode_has_flag(&op1, XB_OPCODE_FLAG_TOKENIZED) &&
 	    _xb_opcode_has_flag(&op2, XB_OPCODE_FLAG_TOKENIZED)) {
-		return xb_stack_push_bool(
+		return _xb_stack_push_bool(
 		    stack,
 		    xb_string_searchv(xb_opcode_get_tokens(&op2), xb_opcode_get_tokens(&op1)),
 		    error);
@@ -1525,16 +1525,16 @@ xb_silo_machine_func_search_cb(XbMachine *self,
 	text = xb_opcode_get_str(&op2);
 	search = xb_opcode_get_str(&op1);
 	if (text == NULL || search == NULL || text[0] == '\0' || search[0] == '\0')
-		return xb_stack_push_bool(stack, FALSE, error);
+		return _xb_stack_push_bool(stack, FALSE, error);
 	if (!g_str_is_ascii(text) || !g_str_is_ascii(search)) {
 		if (priv->profile_flags & XB_SILO_PROFILE_FLAG_DEBUG) {
 			g_debug("tokenization for [%s:%s] may be slow!", text, search);
 		}
-		return xb_stack_push_bool(stack, g_str_match_string(search, text, TRUE), error);
+		return _xb_stack_push_bool(stack, g_str_match_string(search, text, TRUE), error);
 	}
 
 	/* TEXT:TEXT */
-	return xb_stack_push_bool(stack, xb_string_search(text, search), error);
+	return _xb_stack_push_bool(stack, xb_string_search(text, search), error);
 }
 
 static gboolean
@@ -1560,8 +1560,8 @@ xb_silo_machine_fixup_attr_text_cb(XbMachine *self,
 						    G_IO_ERROR,
 						    G_IO_ERROR_NOT_SUPPORTED,
 						    "no attr opcode");
-			xb_stack_pop(opcodes, NULL, NULL);
-			xb_stack_pop(opcodes, NULL, NULL);
+			_xb_stack_pop(opcodes, NULL, NULL);
+			_xb_stack_pop(opcodes, NULL, NULL);
 			return FALSE;
 		}
 

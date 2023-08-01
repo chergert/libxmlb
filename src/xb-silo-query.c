@@ -54,8 +54,8 @@ xb_silo_query_node_matches(XbSilo *self,
 				predicate_bindings_ptr = &predicate_bindings;
 
 			/* set up the bindings for this predicate */
-			for (guint k = 0; bindings != NULL && k < xb_stack_get_size(opcodes); k++) {
-				XbOpcode *op = xb_stack_peek(opcodes, k);
+			for (guint k = 0; bindings != NULL && k < _xb_stack_get_size(opcodes); k++) {
+				XbOpcode *op = _xb_stack_peek(opcodes, k);
 				if (xb_opcode_is_binding(op)) {
 					/* ignore errors as they’ll be caught by xb_machine_run() */
 					xb_value_bindings_copy_binding(bindings,
