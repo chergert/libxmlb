@@ -90,6 +90,19 @@ static GParamSpec *obj_props[PROP_ENABLE_NODE_CACHE + 1] = {
     NULL,
 };
 
+static inline gboolean
+_g_str_is_ascii (const gchar *str)
+{
+  gsize i;
+
+  for (i = 0; str[i]; i++) {
+	  if (str[i] & 0x80)
+		  return FALSE;
+  }
+
+  return TRUE;
+}
+
 /* private */
 GTimer *
 xb_silo_start_profile(XbSilo *self)
@@ -1527,7 +1540,7 @@ xb_silo_machine_func_search_cb(XbMachine *self,
 	search = xb_opcode_get_str(&op1);
 	if (text == NULL || search == NULL || text[0] == '\0' || search[0] == '\0')
 		return _xb_stack_push_bool(stack, FALSE, error);
-	if (!g_str_is_ascii(text) || !g_str_is_ascii(search)) {
+	if (!_g_str_is_ascii(text) || !_g_str_is_ascii(search)) {
 		if (priv->profile_flags & XB_SILO_PROFILE_FLAG_DEBUG) {
 			g_debug("tokenization for [%s:%s] may be slow!", text, search);
 		}
