@@ -258,7 +258,7 @@ xb_machine_parse_add_func(XbMachine *self,
 {
 	XbOpcode *opcode;
 
-	if (!xb_stack_push(opcodes, &opcode, error))
+	if (!_xb_stack_push(opcodes, &opcode, error))
 		return FALSE;
 
 	/* match opcode, which should always exist */
@@ -270,7 +270,7 @@ xb_machine_parse_add_func(XbMachine *self,
 				    "built-in function not found: %s",
 				    func_name);
 		}
-		xb_stack_pop(opcodes, NULL, NULL);
+		_xb_stack_pop(opcodes, NULL, NULL);
 		return FALSE;
 	}
 	xb_opcode_set_level(opcode, level);
@@ -367,7 +367,7 @@ xb_machine_parse_add_text(XbMachine *self,
 	/* NULL is perfectly valid */
 	if (text == NULL) {
 		XbOpcode *opcode;
-		if (!xb_stack_push(opcodes, &opcode, error))
+		if (!_xb_stack_push(opcodes, &opcode, error))
 			return FALSE;
 		xb_opcode_text_init_static(opcode, str);
 		return TRUE;
@@ -384,14 +384,14 @@ xb_machine_parse_add_text(XbMachine *self,
 	for (guint i = 0; i < priv->text_handlers->len; i++) {
 		XbMachineTextHandlerItem *item = g_ptr_array_index(priv->text_handlers, i);
 		gboolean handled = FALSE;
-		guint opcodes_sz = xb_stack_get_size(opcodes);
+		guint opcodes_sz = _xb_stack_get_size(opcodes);
 		if (!item->handler_cb(self, opcodes, str, &handled, item->user_data, error))
 			return FALSE;
 		if (handled) {
 			/* ideally the XbMachineTextHandlerFunc would contain a `guint8 level` but
 			 * that is now public ABI. Just fixup the level for any added opcodes */
-			for (guint j = xb_stack_get_size(opcodes); j > opcodes_sz; j--) {
-				XbOpcode *op_tmp = xb_stack_peek(opcodes, j - 1);
+			for (guint j = _xb_stack_get_size(opcodes); j > opcodes_sz; j--) {
+				XbOpcode *op_tmp = _xb_stack_peek(opcodes, j - 1);
 				xb_opcode_set_level(op_tmp, level);
 			}
 			return TRUE;
@@ -403,7 +403,7 @@ xb_machine_parse_add_text(XbMachine *self,
 		if (str[0] == '\'' && str[text_len - 1] == '\'') {
 			g_autofree gchar *tmp = g_strndup(str + 1, text_len - 2);
 			XbOpcode *opcode;
-			if (!xb_stack_push(opcodes, &opcode, error))
+			if (!_xb_stack_push(opcodes, &opcode, error))
 				return FALSE;
 			xb_opcode_text_init_steal(opcode, g_steal_pointer(&tmp));
 			xb_opcode_set_level(opcode, level);
@@ -416,7 +416,7 @@ xb_machine_parse_add_text(XbMachine *self,
 		if (str[0] == '$' && str[1] == '\'' && str[text_len - 1] == '\'') {
 			g_autofree gchar *tmp = g_strndup(str + 2, text_len - 3);
 			XbOpcode *opcode;
-			if (!xb_stack_push(opcodes, &opcode, error))
+			if (!_xb_stack_push(opcodes, &opcode, error))
 				return FALSE;
 			xb_opcode_init(opcode,
 				       XB_OPCODE_KIND_INDEXED_TEXT,
@@ -431,7 +431,7 @@ xb_machine_parse_add_text(XbMachine *self,
 	/* bind variables */
 	if (g_strcmp0(str, "?") == 0) {
 		XbOpcode *opcode;
-		if (!xb_stack_push(opcodes, &opcode, error))
+		if (!_xb_stack_push(opcodes, &opcode, error))
 			return FALSE;
 		xb_opcode_bind_init(opcode);
 		xb_opcode_set_level(opcode, level);
@@ -441,7 +441,7 @@ xb_machine_parse_add_text(XbMachine *self,
 	/* check for plain integer */
 	if (g_ascii_string_to_unsigned(str, 10, 0, G_MAXUINT32, &val, NULL)) {
 		XbOpcode *opcode;
-		if (!xb_stack_push(opcodes, &opcode, error))
+		if (!_xb_stack_push(opcodes, &opcode, error))
 			return FALSE;
 		xb_opcode_integer_init(opcode, val);
 		xb_opcode_set_level(opcode, level);
@@ -506,7 +506,7 @@ xb_machine_parse_section(XbMachine *self,
 				}
 
 				/* multiple "eq" sections are converted to "in" */
-				op_tail = xb_stack_peek_tail(opcodes);
+				op_tail = _xb_stack_peek_tail(opcodes);
 				if (op_tail != NULL && _xb_opcode_get_level(op_tail) != level &&
 				    g_strcmp0(op_name, "eq") == 0)
 					op_name = "in";
@@ -618,8 +618,8 @@ static gchar *
 xb_machine_get_opcodes_sig(XbMachine *self, XbStack *opcodes)
 {
 	GString *str = g_string_new(NULL);
-	for (guint i = 0; i < xb_stack_get_size(opcodes); i++) {
-		XbOpcode *op = xb_stack_peek(opcodes, i);
+	for (guint i = 0; i < _xb_stack_get_size(opcodes); i++) {
+		XbOpcode *op = _xb_stack_peek(opcodes, i);
 		g_autofree gchar *sig = xb_opcode_get_sig(op);
 		g_string_append_printf(str, "%s,", sig);
 	}
@@ -647,7 +647,7 @@ xb_machine_opcodes_optimize_fn(XbMachine *self,
 	/* not a function */
 	if (_xb_opcode_get_kind(&op) != XB_OPCODE_KIND_FUNCTION) {
 		XbOpcode *op_out;
-		if (!xb_stack_push(results, &op_out, error))
+		if (!_xb_stack_push(results, &op_out, error))
 			return FALSE;
 		*op_out = xb_opcode_steal(&op_owned);
 		return TRUE;
@@ -655,11 +655,12 @@ xb_machine_opcodes_optimize_fn(XbMachine *self,
 
 	/* get function, check if we have enough arguments */
 	item = g_ptr_array_index(priv->methods, _xb_opcode_get_val(&op));
-	if (item->n_opcodes > xb_stack_get_size(opcodes)) {
-		g_set_error_literal(error,
-				    G_IO_ERROR,
-				    G_IO_ERROR_INVALID_DATA,
-				    "predicate invalid -- not enough args");
+	if (item->n_opcodes > _xb_stack_get_size(opcodes)) {
+		if (error != NULL)
+			g_set_error_literal(error,
+					    G_IO_ERROR,
+					    G_IO_ERROR_INVALID_DATA,
+					    "predicate invalid -- not enough args");
 		return FALSE;
 	}
 
@@ -675,7 +676,7 @@ xb_machine_opcodes_optimize_fn(XbMachine *self,
 				stack_str,
 				error_local->message);
 		}
-		if (!xb_stack_push(results, &op_out, error))
+		if (!_xb_stack_push(results, &op_out, error))
 			return FALSE;
 		*op_out = xb_opcode_steal(&op_owned);
 		return TRUE;
@@ -692,7 +693,7 @@ xb_machine_opcodes_optimize_fn(XbMachine *self,
 			g_autofree gchar *tmp = xb_opcode_to_string(&op_result);
 			g_debug("method ran, adding result %s", tmp);
 		}
-		if (!xb_stack_push(results, &op_out, error))
+		if (!_xb_stack_push(results, &op_out, error))
 			return FALSE;
 		xb_opcode_set_level(&op_result, _xb_opcode_get_level(&op));
 		*op_out = xb_opcode_steal(&op_result);
@@ -737,9 +738,9 @@ xb_machine_opcodes_optimize(XbMachine *self, XbStack *opcodes, GError **error)
 	}
 
 	/* copy back the result into the opcodes stack (and reverse it) */
-	while (xb_stack_pop(results, &op, NULL)) {
+	while (_xb_stack_pop(results, &op, NULL)) {
 		XbOpcode *op_out;
-		if (!xb_stack_push(opcodes, &op_out, error))
+		if (!_xb_stack_push(opcodes, &op_out, error))
 			return FALSE;
 		*op_out = xb_opcode_steal(&op);
 	}
@@ -896,7 +897,7 @@ xb_machine_parse_full(XbMachine *self,
 	/* optimize */
 	if (flags & XB_MACHINE_PARSE_FLAG_OPTIMIZE) {
 		for (guint i = 0; i < 10; i++) {
-			guint oldsz = xb_stack_get_size(opcodes);
+			guint oldsz = _xb_stack_get_size(opcodes);
 
 			/* Is the stack optimal already? */
 			if (oldsz == 1)
@@ -904,7 +905,7 @@ xb_machine_parse_full(XbMachine *self,
 
 			if (!xb_machine_opcodes_optimize(self, opcodes, error))
 				return NULL;
-			if (oldsz == xb_stack_get_size(opcodes))
+			if (oldsz == _xb_stack_get_size(opcodes))
 				break;
 		}
 	}
@@ -938,7 +939,7 @@ static void
 xb_machine_debug_show_stack(XbMachine *self, XbStack *stack)
 {
 	g_autofree gchar *str = NULL;
-	if (xb_stack_get_size(stack) == 0) {
+	if (_xb_stack_get_size(stack) == 0) {
 		g_debug("stack is empty");
 		return;
 	}
@@ -964,14 +965,14 @@ xb_machine_run_func(XbMachine *self,
 	}
 
 	/* check we have enough stack elements */
-	if (item->n_opcodes > xb_stack_get_size(stack)) {
+	if (item->n_opcodes > _xb_stack_get_size(stack)) {
 		if (error != NULL) {
 			g_set_error(error,
 				    G_IO_ERROR,
 				    G_IO_ERROR_NOT_SUPPORTED,
 				    "function required %u arguments, stack only has %u",
 				    item->n_opcodes,
-				    xb_stack_get_size(stack));
+				    _xb_stack_get_size(stack));
 		}
 		return FALSE;
 	}
@@ -1042,7 +1043,7 @@ xb_machine_run_with_bindings(XbMachine *self,
 	XbMachinePrivate *priv = GET_PRIVATE(self);
 	g_auto(XbOpcode) opcode_success = XB_OPCODE_INIT();
 	g_autoptr(XbStack) stack = NULL;
-	guint opcodes_stack_size = xb_stack_get_size(opcodes);
+	guint opcodes_stack_size = _xb_stack_get_size(opcodes);
 	guint bound_opcode_idx = 0;
 
 	g_return_val_if_fail(XB_IS_MACHINE(self), FALSE);
@@ -1053,7 +1054,7 @@ xb_machine_run_with_bindings(XbMachine *self,
 	/* process each opcode */
 	stack = xb_stack_new_inline(priv->stack_size);
 	for (guint i = 0; i < opcodes_stack_size; i++) {
-		XbOpcode *opcode = xb_stack_peek(opcodes, i);
+		XbOpcode *opcode = _xb_stack_peek(opcodes, i);
 		XbOpcodeKind kind = _xb_opcode_get_kind(opcode);
 
 		/* replace post-0.3.0-style bound opcodes with their bound values */
@@ -1129,19 +1130,19 @@ xb_machine_run_with_bindings(XbMachine *self,
 	}
 
 	/* the stack should have one boolean left on the stack */
-	if (xb_stack_get_size(stack) != 1) {
+	if (_xb_stack_get_size(stack) != 1) {
 		if (error != NULL) {
 			g_autofree gchar *tmp = xb_stack_to_string(stack);
 			g_set_error(error,
 				    G_IO_ERROR,
 				    G_IO_ERROR_INVALID_DATA,
 				    "%u opcodes remain on the stack (%s)",
-				    xb_stack_get_size(stack),
+				    _xb_stack_get_size(stack),
 				    tmp);
 		}
 		return FALSE;
 	}
-	if (!xb_stack_pop(stack, &opcode_success, error))
+	if (!_xb_stack_pop(stack, &opcode_success, error))
 		return FALSE;
 	if (_xb_opcode_get_kind(&opcode_success) != XB_OPCODE_KIND_BOOLEAN) {
 		if (error != NULL) {
@@ -1180,7 +1181,7 @@ xb_machine_stack_pop(XbMachine *self, XbStack *stack, XbOpcode *opcode_out, GErr
 	gboolean retval;
 
 	if (priv->debug_flags & XB_MACHINE_DEBUG_FLAG_SHOW_STACK) {
-		XbOpcode *opcode_peek = xb_stack_peek(stack, xb_stack_get_size(stack) - 1);
+		XbOpcode *opcode_peek = _xb_stack_peek(stack, _xb_stack_get_size(stack) - 1);
 		if (opcode_peek != NULL) {
 			g_autofree gchar *str = xb_opcode_to_string(opcode_peek);
 			g_debug("popping: %s", str);
@@ -1189,7 +1190,7 @@ xb_machine_stack_pop(XbMachine *self, XbStack *stack, XbOpcode *opcode_out, GErr
 		}
 	}
 
-	retval = xb_stack_pop(stack, opcode_out, error);
+	retval = _xb_stack_pop(stack, opcode_out, error);
 
 	if (priv->debug_flags & XB_MACHINE_DEBUG_FLAG_SHOW_STACK)
 		xb_machine_debug_show_stack(self, stack);
@@ -1211,8 +1212,8 @@ xb_machine_stack_pop_two(XbMachine *self,
 	gboolean retval;
 
 	if (priv->debug_flags & XB_MACHINE_DEBUG_FLAG_SHOW_STACK) {
-		XbOpcode *opcode_peek1 = xb_stack_peek(stack, xb_stack_get_size(stack) - 1);
-		XbOpcode *opcode_peek2 = xb_stack_peek(stack, xb_stack_get_size(stack) - 2);
+		XbOpcode *opcode_peek1 = _xb_stack_peek(stack, _xb_stack_get_size(stack) - 1);
+		XbOpcode *opcode_peek2 = _xb_stack_peek(stack, _xb_stack_get_size(stack) - 2);
 		if (opcode_peek1 != NULL && opcode_peek2 != NULL) {
 			g_autofree gchar *str1 = xb_opcode_to_string(opcode_peek1);
 			g_autofree gchar *str2 = xb_opcode_to_string(opcode_peek2);
@@ -1223,7 +1224,7 @@ xb_machine_stack_pop_two(XbMachine *self,
 		}
 	}
 
-	retval = xb_stack_pop_two(stack, opcode1_out, opcode2_out, error);
+	retval = _xb_stack_pop_two(stack, opcode1_out, opcode2_out, error);
 
 	if (priv->debug_flags & XB_MACHINE_DEBUG_FLAG_SHOW_STACK)
 		xb_machine_debug_show_stack(self, stack);
@@ -1256,7 +1257,7 @@ xb_machine_stack_push(XbMachine *self, XbStack *stack, XbOpcode **opcode_out, GE
 		g_debug("pushing generic opcode");
 	}
 
-	return xb_stack_push(stack, opcode_out, error);
+	return _xb_stack_push(stack, opcode_out, error);
 }
 
 /**
@@ -1282,7 +1283,7 @@ xb_machine_stack_push_text(XbMachine *self, XbStack *stack, const gchar *str, GE
 	if (priv->debug_flags & XB_MACHINE_DEBUG_FLAG_SHOW_STACK)
 		g_debug("pushing: %s", str);
 
-	if (!xb_stack_push(stack, &opcode, error))
+	if (!_xb_stack_push(stack, &opcode, error))
 		return FALSE;
 	xb_opcode_text_init(opcode, str);
 	if (priv->debug_flags & XB_MACHINE_DEBUG_FLAG_SHOW_STACK)
@@ -1314,7 +1315,7 @@ xb_machine_stack_push_text_static(XbMachine *self, XbStack *stack, const gchar *
 	if (priv->debug_flags & XB_MACHINE_DEBUG_FLAG_SHOW_STACK)
 		g_debug("pushing: %s", str);
 
-	if (!xb_stack_push(stack, &opcode, error))
+	if (!_xb_stack_push(stack, &opcode, error))
 		return FALSE;
 	xb_opcode_text_init_static(opcode, str);
 	if (priv->debug_flags & XB_MACHINE_DEBUG_FLAG_SHOW_STACK)
@@ -1347,7 +1348,7 @@ xb_machine_stack_push_text_steal(XbMachine *self, XbStack *stack, gchar *str, GE
 	if (priv->debug_flags & XB_MACHINE_DEBUG_FLAG_SHOW_STACK)
 		g_debug("pushing: %s", str_stolen);
 
-	if (!xb_stack_push(stack, &opcode, error))
+	if (!_xb_stack_push(stack, &opcode, error))
 		return FALSE;
 	xb_opcode_text_init_steal(opcode, g_steal_pointer(&str_stolen));
 	if (priv->debug_flags & XB_MACHINE_DEBUG_FLAG_SHOW_STACK)
@@ -1379,7 +1380,7 @@ xb_machine_stack_push_integer(XbMachine *self, XbStack *stack, guint32 val, GErr
 	if (priv->debug_flags & XB_MACHINE_DEBUG_FLAG_SHOW_STACK)
 		g_debug("pushing: %u", val);
 
-	if (!xb_stack_push(stack, &opcode, error))
+	if (!_xb_stack_push(stack, &opcode, error))
 		return FALSE;
 	xb_opcode_integer_init(opcode, val);
 	if (priv->debug_flags & XB_MACHINE_DEBUG_FLAG_SHOW_STACK)
@@ -1483,7 +1484,7 @@ xb_machine_check_one_arg(XbStack *stack, OpcodeCheckFunc f, GError **error)
 {
 	XbOpcode *head;
 
-	head = xb_stack_peek_tail(stack);
+	head = _xb_stack_peek_tail(stack);
 	if (head == NULL || !f(head)) {
 		if (error != NULL) {
 			g_set_error(error,
@@ -1504,11 +1505,11 @@ xb_machine_check_two_args(XbStack *stack, OpcodeCheckFunc f1, OpcodeCheckFunc f2
 {
 	XbOpcode *head1 = NULL;
 	XbOpcode *head2 = NULL;
-	guint stack_size = xb_stack_get_size(stack);
+	guint stack_size = _xb_stack_get_size(stack);
 
 	if (stack_size >= 2) {
-		head1 = xb_stack_peek(stack, stack_size - 1);
-		head2 = xb_stack_peek(stack, stack_size - 2);
+		head1 = _xb_stack_peek(stack, stack_size - 1);
+		head2 = _xb_stack_peek(stack, stack_size - 2);
 	}
 	if (head1 == NULL || head2 == NULL || !f1(head1) || !f2(head2)) {
 		if (error != NULL) {
@@ -1544,7 +1545,7 @@ xb_machine_func_and_cb(XbMachine *self,
 		return FALSE;
 
 	/* INTE:INTE */
-	return xb_stack_push_bool(stack, _xb_opcode_get_val(&op1) && _xb_opcode_get_val(&op2), error);
+	return _xb_stack_push_bool(stack, _xb_opcode_get_val(&op1) && _xb_opcode_get_val(&op2), error);
 }
 
 static gboolean
@@ -1564,7 +1565,7 @@ xb_machine_func_or_cb(XbMachine *self,
 		return FALSE;
 
 	/* INTE:INTE */
-	return xb_stack_push_bool(stack, _xb_opcode_get_val(&op1) || _xb_opcode_get_val(&op2), error);
+	return _xb_stack_push_bool(stack, _xb_opcode_get_val(&op1) || _xb_opcode_get_val(&op2), error);
 }
 
 static gboolean
@@ -1589,9 +1590,9 @@ xb_machine_func_eq_cb(XbMachine *self,
 
 	/* INTE:INTE */
 	if (_xb_opcode_cmp_val(&op1) && _xb_opcode_cmp_val(&op2))
-		return xb_stack_push_bool(stack,
-					  _xb_opcode_get_val(&op1) == _xb_opcode_get_val(&op2),
-					  error);
+		return _xb_stack_push_bool(stack,
+					   _xb_opcode_get_val(&op1) == _xb_opcode_get_val(&op2),
+					   error);
 
 	/* TEXT:TEXT */
 	if (xb_opcode_cmp_str(&op1) && xb_opcode_cmp_str(&op2)) {
@@ -1600,7 +1601,7 @@ xb_machine_func_eq_cb(XbMachine *self,
 			g_autofree gchar *str2 = xb_opcode_to_string(&op2);
 			g_debug("slow strcmp fallback of %s:%s", str1, str2);
 		}
-		return xb_stack_push_bool(
+		return _xb_stack_push_bool(
 		    stack,
 		    g_strcmp0(_xb_opcode_get_str(&op1), _xb_opcode_get_str(&op2)) == 0,
 		    error);
@@ -1610,7 +1611,7 @@ xb_machine_func_eq_cb(XbMachine *self,
 	if (_xb_opcode_cmp_val(&op1) && xb_opcode_cmp_str(&op2)) {
 		guint64 val = 0;
 		if (_xb_opcode_get_str(&op2) == NULL)
-			return xb_stack_push_bool(stack, FALSE, error);
+			return _xb_stack_push_bool(stack, FALSE, error);
 		if (priv->debug_flags & XB_MACHINE_DEBUG_FLAG_SHOW_SLOW_PATH) {
 			g_autofree gchar *str1 = xb_opcode_to_string(&op1);
 			g_autofree gchar *str2 = xb_opcode_to_string(&op2);
@@ -1624,14 +1625,14 @@ xb_machine_func_eq_cb(XbMachine *self,
 						error)) {
 			return FALSE;
 		}
-		return xb_stack_push_bool(stack, val == _xb_opcode_get_val(&op1), error);
+		return _xb_stack_push_bool(stack, val == _xb_opcode_get_val(&op1), error);
 	}
 
 	/* TEXT:INTE */
 	if (xb_opcode_cmp_str(&op1) && _xb_opcode_cmp_val(&op2)) {
 		guint64 val = 0;
 		if (_xb_opcode_get_str(&op1) == NULL)
-			return xb_stack_push_bool(stack, FALSE, error);
+			return _xb_stack_push_bool(stack, FALSE, error);
 		if (priv->debug_flags & XB_MACHINE_DEBUG_FLAG_SHOW_SLOW_PATH) {
 			g_autofree gchar *str1 = xb_opcode_to_string(&op1);
 			g_autofree gchar *str2 = xb_opcode_to_string(&op2);
@@ -1645,7 +1646,7 @@ xb_machine_func_eq_cb(XbMachine *self,
 						error)) {
 			return FALSE;
 		}
-		return xb_stack_push_bool(stack, val == _xb_opcode_get_val(&op2), error);
+		return _xb_stack_push_bool(stack, val == _xb_opcode_get_val(&op2), error);
 	}
 
 	/* should have been checked above */
@@ -1681,14 +1682,14 @@ xb_machine_func_ne_cb(XbMachine *self,
 
 	/* INTE:INTE */
 	if (_xb_opcode_cmp_val(&op1) && _xb_opcode_cmp_val(&op2)) {
-		return xb_stack_push_bool(stack,
-					  _xb_opcode_get_val(&op1) != _xb_opcode_get_val(&op2),
-					  error);
+		return _xb_stack_push_bool(stack,
+					   _xb_opcode_get_val(&op1) != _xb_opcode_get_val(&op2),
+					   error);
 	}
 
 	/* TEXT:TEXT */
 	if (xb_opcode_cmp_str(&op1) && xb_opcode_cmp_str(&op2)) {
-		return xb_stack_push_bool(
+		return _xb_stack_push_bool(
 		    stack,
 		    g_strcmp0(_xb_opcode_get_str(&op1), _xb_opcode_get_str(&op2)) != 0,
 		    error);
@@ -1698,7 +1699,7 @@ xb_machine_func_ne_cb(XbMachine *self,
 	if (_xb_opcode_cmp_val(&op1) && xb_opcode_cmp_str(&op2)) {
 		guint64 val = 0;
 		if (_xb_opcode_get_str(&op2) == NULL)
-			return xb_stack_push_bool(stack, FALSE, error);
+			return _xb_stack_push_bool(stack, FALSE, error);
 		if (!g_ascii_string_to_unsigned(_xb_opcode_get_str(&op2),
 						10,
 						0,
@@ -1707,14 +1708,14 @@ xb_machine_func_ne_cb(XbMachine *self,
 						error)) {
 			return FALSE;
 		}
-		return xb_stack_push_bool(stack, val != _xb_opcode_get_val(&op1), error);
+		return _xb_stack_push_bool(stack, val != _xb_opcode_get_val(&op1), error);
 	}
 
 	/* TEXT:INTE */
 	if (xb_opcode_cmp_str(&op1) && _xb_opcode_cmp_val(&op2)) {
 		guint64 val = 0;
 		if (_xb_opcode_get_str(&op1) == NULL)
-			return xb_stack_push_bool(stack, FALSE, error);
+			return _xb_stack_push_bool(stack, FALSE, error);
 		if (!g_ascii_string_to_unsigned(_xb_opcode_get_str(&op1),
 						10,
 						0,
@@ -1723,7 +1724,7 @@ xb_machine_func_ne_cb(XbMachine *self,
 						error)) {
 			return FALSE;
 		}
-		return xb_stack_push_bool(stack, val != _xb_opcode_get_val(&op2), error);
+		return _xb_stack_push_bool(stack, val != _xb_opcode_get_val(&op2), error);
 	}
 
 	/* should have been checked above */
@@ -1759,14 +1760,14 @@ xb_machine_func_lt_cb(XbMachine *self,
 
 	/* INTE:INTE */
 	if (_xb_opcode_cmp_val(&op1) && _xb_opcode_cmp_val(&op2)) {
-		return xb_stack_push_bool(stack,
-					  _xb_opcode_get_val(&op2) < _xb_opcode_get_val(&op1),
-					  error);
+		return _xb_stack_push_bool(stack,
+					   _xb_opcode_get_val(&op2) < _xb_opcode_get_val(&op1),
+					   error);
 	}
 
 	/* TEXT:TEXT */
 	if (xb_opcode_cmp_str(&op1) && xb_opcode_cmp_str(&op2)) {
-		return xb_stack_push_bool(
+		return _xb_stack_push_bool(
 		    stack,
 		    g_strcmp0(_xb_opcode_get_str(&op2), _xb_opcode_get_str(&op1)) < 0,
 		    error);
@@ -1776,7 +1777,7 @@ xb_machine_func_lt_cb(XbMachine *self,
 	if (_xb_opcode_cmp_val(&op1) && xb_opcode_cmp_str(&op2)) {
 		guint64 val = 0;
 		if (_xb_opcode_get_str(&op2) == NULL)
-			return xb_stack_push_bool(stack, FALSE, error);
+			return _xb_stack_push_bool(stack, FALSE, error);
 		if (!g_ascii_string_to_unsigned(_xb_opcode_get_str(&op2),
 						10,
 						0,
@@ -1785,14 +1786,14 @@ xb_machine_func_lt_cb(XbMachine *self,
 						error)) {
 			return FALSE;
 		}
-		return xb_stack_push_bool(stack, val < _xb_opcode_get_val(&op1), error);
+		return _xb_stack_push_bool(stack, val < _xb_opcode_get_val(&op1), error);
 	}
 
 	/* TEXT:INTE */
 	if (xb_opcode_cmp_str(&op1) && _xb_opcode_cmp_val(&op2)) {
 		guint64 val = 0;
 		if (_xb_opcode_get_str(&op1) == NULL)
-			return xb_stack_push_bool(stack, FALSE, error);
+			return _xb_stack_push_bool(stack, FALSE, error);
 		if (!g_ascii_string_to_unsigned(_xb_opcode_get_str(&op1),
 						10,
 						0,
@@ -1801,7 +1802,7 @@ xb_machine_func_lt_cb(XbMachine *self,
 						error)) {
 			return FALSE;
 		}
-		return xb_stack_push_bool(stack, val < _xb_opcode_get_val(&op2), error);
+		return _xb_stack_push_bool(stack, val < _xb_opcode_get_val(&op2), error);
 	}
 
 	/* should have been checked above */
@@ -1837,14 +1838,14 @@ xb_machine_func_gt_cb(XbMachine *self,
 
 	/* INTE:INTE */
 	if (_xb_opcode_cmp_val(&op1) && _xb_opcode_cmp_val(&op2)) {
-		return xb_stack_push_bool(stack,
+		return _xb_stack_push_bool(stack,
 					  _xb_opcode_get_val(&op2) > _xb_opcode_get_val(&op1),
 					  error);
 	}
 
 	/* TEXT:TEXT */
 	if (xb_opcode_cmp_str(&op1) && xb_opcode_cmp_str(&op2)) {
-		return xb_stack_push_bool(
+		return _xb_stack_push_bool(
 		    stack,
 		    g_strcmp0(_xb_opcode_get_str(&op2), _xb_opcode_get_str(&op1)) > 0,
 		    error);
@@ -1854,7 +1855,7 @@ xb_machine_func_gt_cb(XbMachine *self,
 	if (_xb_opcode_cmp_val(&op1) && xb_opcode_cmp_str(&op2)) {
 		guint64 val = 0;
 		if (_xb_opcode_get_str(&op2) == NULL)
-			return xb_stack_push_bool(stack, FALSE, error);
+			return _xb_stack_push_bool(stack, FALSE, error);
 		if (!g_ascii_string_to_unsigned(_xb_opcode_get_str(&op2),
 						10,
 						0,
@@ -1863,14 +1864,14 @@ xb_machine_func_gt_cb(XbMachine *self,
 						error)) {
 			return FALSE;
 		}
-		return xb_stack_push_bool(stack, val > _xb_opcode_get_val(&op1), error);
+		return _xb_stack_push_bool(stack, val > _xb_opcode_get_val(&op1), error);
 	}
 
 	/* TEXT:INTE */
 	if (xb_opcode_cmp_str(&op1) && _xb_opcode_cmp_val(&op2)) {
 		guint64 val = 0;
 		if (_xb_opcode_get_str(&op1) == NULL)
-			return xb_stack_push_bool(stack, FALSE, error);
+			return _xb_stack_push_bool(stack, FALSE, error);
 		if (!g_ascii_string_to_unsigned(_xb_opcode_get_str(&op1),
 						10,
 						0,
@@ -1879,7 +1880,7 @@ xb_machine_func_gt_cb(XbMachine *self,
 						error)) {
 			return FALSE;
 		}
-		return xb_stack_push_bool(stack, val > _xb_opcode_get_val(&op2), error);
+		return _xb_stack_push_bool(stack, val > _xb_opcode_get_val(&op2), error);
 	}
 
 	/* should have been checked above */
@@ -1915,14 +1916,14 @@ xb_machine_func_le_cb(XbMachine *self,
 
 	/* INTE:INTE */
 	if (_xb_opcode_cmp_val(&op1) && _xb_opcode_cmp_val(&op2)) {
-		return xb_stack_push_bool(stack,
+		return _xb_stack_push_bool(stack,
 					  _xb_opcode_get_val(&op2) <= _xb_opcode_get_val(&op1),
 					  error);
 	}
 
 	/* TEXT:TEXT */
 	if (xb_opcode_cmp_str(&op1) && xb_opcode_cmp_str(&op2)) {
-		return xb_stack_push_bool(
+		return _xb_stack_push_bool(
 		    stack,
 		    g_strcmp0(_xb_opcode_get_str(&op2), _xb_opcode_get_str(&op1)) <= 0,
 		    error);
@@ -1933,7 +1934,7 @@ xb_machine_func_le_cb(XbMachine *self,
 	if (_xb_opcode_cmp_val(&op1) && xb_opcode_cmp_str(&op2)) {
 		guint64 val = 0;
 		if (_xb_opcode_get_str(&op2) == NULL)
-			return xb_stack_push_bool(stack, FALSE, error);
+			return _xb_stack_push_bool(stack, FALSE, error);
 		if (!g_ascii_string_to_unsigned(_xb_opcode_get_str(&op2),
 						10,
 						0,
@@ -1942,14 +1943,14 @@ xb_machine_func_le_cb(XbMachine *self,
 						error)) {
 			return FALSE;
 		}
-		return xb_stack_push_bool(stack, val <= _xb_opcode_get_val(&op1), error);
+		return _xb_stack_push_bool(stack, val <= _xb_opcode_get_val(&op1), error);
 	}
 
 	/* TEXT:INTE */
 	if (xb_opcode_cmp_str(&op1) && _xb_opcode_cmp_val(&op2)) {
 		guint64 val = 0;
 		if (_xb_opcode_get_str(&op1) == NULL)
-			return xb_stack_push_bool(stack, FALSE, error);
+			return _xb_stack_push_bool(stack, FALSE, error);
 		if (!g_ascii_string_to_unsigned(_xb_opcode_get_str(&op1),
 						10,
 						0,
@@ -1958,7 +1959,7 @@ xb_machine_func_le_cb(XbMachine *self,
 						error)) {
 			return FALSE;
 		}
-		return xb_stack_push_bool(stack, val <= _xb_opcode_get_val(&op2), error);
+		return _xb_stack_push_bool(stack, val <= _xb_opcode_get_val(&op2), error);
 	}
 
 	/* should have been checked above */
@@ -2034,11 +2035,11 @@ xb_machine_func_not_cb(XbMachine *self,
 
 	/* TEXT */
 	if (xb_opcode_cmp_str(&op))
-		return xb_stack_push_bool(stack, _xb_opcode_get_str(&op) == NULL, error);
+		return _xb_stack_push_bool(stack, _xb_opcode_get_str(&op) == NULL, error);
 
 	/* INTE */
 	if (_xb_opcode_cmp_val(&op))
-		return xb_stack_push_bool(stack, _xb_opcode_get_val(&op) == 0, error);
+		return _xb_stack_push_bool(stack, _xb_opcode_get_val(&op) == 0, error);
 
 	/* should have been checked above */
 	if (error != NULL) {
@@ -2072,7 +2073,7 @@ xb_machine_func_ge_cb(XbMachine *self,
 
 	/* TEXT:TEXT */
 	if (xb_opcode_cmp_str(&op1) && xb_opcode_cmp_str(&op2)) {
-		return xb_stack_push_bool(
+		return _xb_stack_push_bool(
 		    stack,
 		    g_strcmp0(_xb_opcode_get_str(&op2), _xb_opcode_get_str(&op1)) >= 0,
 		    error);
@@ -2080,7 +2081,7 @@ xb_machine_func_ge_cb(XbMachine *self,
 
 	/* INTE:INTE */
 	if (_xb_opcode_cmp_val(&op1) && _xb_opcode_cmp_val(&op2)) {
-		return xb_stack_push_bool(stack,
+		return _xb_stack_push_bool(stack,
 					  _xb_opcode_get_val(&op2) >= _xb_opcode_get_val(&op1),
 					  error);
 	}
@@ -2089,7 +2090,7 @@ xb_machine_func_ge_cb(XbMachine *self,
 	if (_xb_opcode_cmp_val(&op1) && xb_opcode_cmp_str(&op2)) {
 		guint64 val = 0;
 		if (_xb_opcode_get_str(&op2) == NULL)
-			return xb_stack_push_bool(stack, FALSE, error);
+			return _xb_stack_push_bool(stack, FALSE, error);
 		if (!g_ascii_string_to_unsigned(_xb_opcode_get_str(&op2),
 						10,
 						0,
@@ -2098,14 +2099,14 @@ xb_machine_func_ge_cb(XbMachine *self,
 						error)) {
 			return FALSE;
 		}
-		return xb_stack_push_bool(stack, val >= _xb_opcode_get_val(&op1), error);
+		return _xb_stack_push_bool(stack, val >= _xb_opcode_get_val(&op1), error);
 	}
 
 	/* TEXT:INTE */
 	if (xb_opcode_cmp_str(&op1) && _xb_opcode_cmp_val(&op2)) {
 		guint64 val = 0;
 		if (_xb_opcode_get_str(&op1) == NULL)
-			return xb_stack_push_bool(stack, FALSE, error);
+			return _xb_stack_push_bool(stack, FALSE, error);
 		if (!g_ascii_string_to_unsigned(_xb_opcode_get_str(&op1),
 						10,
 						0,
@@ -2114,7 +2115,7 @@ xb_machine_func_ge_cb(XbMachine *self,
 						error)) {
 			return FALSE;
 		}
-		return xb_stack_push_bool(stack, val >= _xb_opcode_get_val(&op2), error);
+		return _xb_stack_push_bool(stack, val >= _xb_opcode_get_val(&op2), error);
 	}
 
 	/* should have been checked above */
@@ -2146,7 +2147,7 @@ xb_machine_func_contains_cb(XbMachine *self,
 		return FALSE;
 
 	/* TEXT:TEXT */
-	return xb_stack_push_bool(
+	return _xb_stack_push_bool(
 	    stack,
 	    xb_string_contains(_xb_opcode_get_str(&op2), _xb_opcode_get_str(&op1)),
 	    error);
@@ -2169,7 +2170,7 @@ xb_machine_func_starts_with_cb(XbMachine *self,
 		return FALSE;
 
 	/* TEXT:TEXT */
-	return xb_stack_push_bool(
+	return _xb_stack_push_bool(
 	    stack,
 	    g_str_has_prefix(_xb_opcode_get_str(&op2), _xb_opcode_get_str(&op1)),
 	    error);
@@ -2192,7 +2193,7 @@ xb_machine_func_ends_with_cb(XbMachine *self,
 		return FALSE;
 
 	/* TEXT:TEXT */
-	return xb_stack_push_bool(
+	return _xb_stack_push_bool(
 	    stack,
 	    g_str_has_suffix(_xb_opcode_get_str(&op2), _xb_opcode_get_str(&op1)),
 	    error);
@@ -2216,7 +2217,7 @@ xb_machine_func_number_cb(XbMachine *self,
 
 	/* TEXT */
 	if (_xb_opcode_get_str(&op) == NULL)
-		return xb_stack_push_bool(stack, FALSE, error);
+		return _xb_stack_push_bool(stack, FALSE, error);
 	if (!g_ascii_string_to_unsigned(_xb_opcode_get_str(&op), 10, 0, G_MAXUINT32, &val, error)) {
 		return FALSE;
 	}
@@ -2240,7 +2241,7 @@ xb_machine_func_strlen_cb(XbMachine *self,
 
 	/* TEXT */
 	if (_xb_opcode_get_str(&op) == NULL)
-		return xb_stack_push_bool(stack, FALSE, error);
+		return _xb_stack_push_bool(stack, FALSE, error);
 	return xb_machine_stack_push_integer(self, stack, strlen(_xb_opcode_get_str(&op)), error);
 }
 
@@ -2280,8 +2281,8 @@ xb_machine_func_in_cb(XbMachine *self,
 	guint nr_args = 0;
 
 	/* get the size of the haystack, ensuring we only have strings */
-	for (guint i = xb_stack_get_size(stack) - 1; i > 0; i--) {
-		XbOpcode *op_tmp = xb_stack_peek(stack, i);
+	for (guint i = _xb_stack_get_size(stack) - 1; i > 0; i--) {
+		XbOpcode *op_tmp = _xb_stack_peek(stack, i);
 
 		/* this is a hack as we do not get the current @level */
 		if (level != G_MAXUINT8) {
@@ -2304,7 +2305,7 @@ xb_machine_func_in_cb(XbMachine *self,
 	}
 
 	/* ensure the needle is also a string */
-	op_needle = xb_stack_peek(stack, xb_stack_get_size(stack) - (nr_args + 1));
+	op_needle = _xb_stack_peek(stack, _xb_stack_get_size(stack) - (nr_args + 1));
 	if (!xb_opcode_cmp_str(op_needle)) {
 		if (error != NULL) {
 			g_set_error(error,
@@ -2329,7 +2330,7 @@ xb_machine_func_in_cb(XbMachine *self,
 		return FALSE;
 
 	/* found */
-	return xb_stack_push_bool(stack, g_strv_contains(haystack, _xb_opcode_get_str(&op)), error);
+	return _xb_stack_push_bool(stack, g_strv_contains(haystack, _xb_opcode_get_str(&op)), error);
 }
 
 static void
