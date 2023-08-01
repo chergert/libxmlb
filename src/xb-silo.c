@@ -1279,10 +1279,11 @@ xb_silo_machine_func_attr_cb(XbMachine *self,
 
 	/* optimize pass */
 	if (query_data == NULL) {
-		g_set_error_literal(error,
-				    G_IO_ERROR,
-				    G_IO_ERROR_FAILED_HANDLED,
-				    "cannot optimize: no silo to query");
+		if (error != NULL)
+			g_set_error_literal(error,
+					    G_IO_ERROR,
+					    G_IO_ERROR_FAILED_HANDLED,
+					    "cannot optimize: no silo to query");
 		return FALSE;
 	}
 
@@ -1325,12 +1326,13 @@ xb_silo_machine_func_stem_cb(XbMachine *self,
 
 	head = xb_stack_peek_head(stack);
 	if (head == NULL || !xb_opcode_cmp_str(head)) {
-		g_set_error(error,
-			    G_IO_ERROR,
-			    G_IO_ERROR_NOT_SUPPORTED,
-			    "%s type not supported",
-			    (head != NULL) ? xb_opcode_kind_to_string(xb_opcode_get_kind(head))
-					   : "(null)");
+		if (error != NULL)
+			g_set_error(error,
+				    G_IO_ERROR,
+				    G_IO_ERROR_NOT_SUPPORTED,
+				    "%s type not supported",
+				    (head != NULL) ? xb_opcode_kind_to_string(xb_opcode_get_kind(head))
+						   : "(null)");
 		return FALSE;
 	}
 
@@ -1357,10 +1359,11 @@ xb_silo_machine_func_text_cb(XbMachine *self,
 
 	/* optimize pass */
 	if (query_data == NULL) {
-		g_set_error_literal(error,
-				    G_IO_ERROR,
-				    G_IO_ERROR_FAILED_HANDLED,
-				    "cannot optimize: no silo to query");
+		if (error != NULL)
+			g_set_error_literal(error,
+					    G_IO_ERROR,
+					    G_IO_ERROR_FAILED_HANDLED,
+					    "cannot optimize: no silo to query");
 		return FALSE;
 	}
 
@@ -1400,10 +1403,11 @@ xb_silo_machine_func_tail_cb(XbMachine *self,
 
 	/* optimize pass */
 	if (query_data == NULL) {
-		g_set_error_literal(error,
-				    G_IO_ERROR,
-				    G_IO_ERROR_FAILED_HANDLED,
-				    "cannot optimize: no silo to query");
+		if (error != NULL)
+			g_set_error_literal(error,
+					    G_IO_ERROR,
+					    G_IO_ERROR_FAILED_HANDLED,
+					    "cannot optimize: no silo to query");
 		return FALSE;
 	}
 
@@ -1429,10 +1433,11 @@ xb_silo_machine_func_first_cb(XbMachine *self,
 
 	/* optimize pass */
 	if (query_data == NULL) {
-		g_set_error_literal(error,
-				    G_IO_ERROR,
-				    G_IO_ERROR_FAILED_HANDLED,
-				    "cannot optimize: no silo to query");
+		if (error != NULL)
+			g_set_error_literal(error,
+					    G_IO_ERROR,
+					    G_IO_ERROR_FAILED_HANDLED,
+					    "cannot optimize: no silo to query");
 		return FALSE;
 	}
 	return xb_stack_push_bool(stack, query_data->position == 1, error);
@@ -1450,10 +1455,11 @@ xb_silo_machine_func_last_cb(XbMachine *self,
 
 	/* optimize pass */
 	if (query_data == NULL) {
-		g_set_error_literal(error,
-				    G_IO_ERROR,
-				    G_IO_ERROR_FAILED_HANDLED,
-				    "cannot optimize: no silo to query");
+		if (error != NULL)
+			g_set_error_literal(error,
+					    G_IO_ERROR,
+					    G_IO_ERROR_FAILED_HANDLED,
+					    "cannot optimize: no silo to query");
 		return FALSE;
 	}
 	return xb_stack_push_bool(stack, query_data->sn->next == 0, error);
@@ -1471,10 +1477,11 @@ xb_silo_machine_func_position_cb(XbMachine *self,
 
 	/* optimize pass */
 	if (query_data == NULL) {
-		g_set_error_literal(error,
-				    G_IO_ERROR,
-				    G_IO_ERROR_FAILED_HANDLED,
-				    "cannot optimize: no silo to query");
+		if (error != NULL)
+			g_set_error_literal(error,
+					    G_IO_ERROR,
+					    G_IO_ERROR_FAILED_HANDLED,
+					    "cannot optimize: no silo to query");
 		return FALSE;
 	}
 	return xb_machine_stack_push_integer(self, stack, query_data->position, error);
@@ -1503,14 +1510,15 @@ xb_silo_machine_func_search_cb(XbMachine *self,
 	}
 	if (head1 == NULL || !xb_opcode_cmp_str(head1) || head2 == NULL ||
 	    !xb_opcode_cmp_str(head2)) {
-		g_set_error(error,
-			    G_IO_ERROR,
-			    G_IO_ERROR_NOT_SUPPORTED,
-			    "%s:%s types not supported",
-			    (head1 != NULL) ? xb_opcode_kind_to_string(xb_opcode_get_kind(head1))
-					    : "(null)",
-			    (head2 != NULL) ? xb_opcode_kind_to_string(xb_opcode_get_kind(head2))
-					    : "(null)");
+		if (error != NULL)
+			g_set_error(error,
+				    G_IO_ERROR,
+				    G_IO_ERROR_NOT_SUPPORTED,
+				    "%s:%s types not supported",
+				    (head1 != NULL) ? xb_opcode_kind_to_string(xb_opcode_get_kind(head1))
+						    : "(null)",
+				    (head2 != NULL) ? xb_opcode_kind_to_string(xb_opcode_get_kind(head2))
+						    : "(null)");
 		return FALSE;
 	}
 
@@ -1560,10 +1568,11 @@ xb_silo_machine_fixup_attr_text_cb(XbMachine *self,
 
 		xb_opcode_text_init(op1, text + 1);
 		if (!xb_machine_opcode_func_init(self, op2, "attr")) {
-			g_set_error_literal(error,
-					    G_IO_ERROR,
-					    G_IO_ERROR_NOT_SUPPORTED,
-					    "no attr opcode");
+			if (error != NULL)
+				g_set_error_literal(error,
+						    G_IO_ERROR,
+						    G_IO_ERROR_NOT_SUPPORTED,
+						    "no attr opcode");
 			xb_stack_pop(opcodes, NULL, NULL);
 			xb_stack_pop(opcodes, NULL, NULL);
 			return FALSE;
