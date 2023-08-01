@@ -203,8 +203,8 @@ xb_query_get_bound_opcode(XbQuery *self, guint idx)
 			continue;
 		for (guint j = 0; j < section->predicates->len; j++) {
 			XbStack *stack = g_ptr_array_index(section->predicates, j);
-			for (guint k = 0; k < xb_stack_get_size(stack); k++) {
-				XbOpcode *op = xb_stack_peek(stack, k);
+			for (guint k = 0; k < _xb_stack_get_size(stack); k++) {
+				XbOpcode *op = _xb_stack_peek(stack, k);
 				if (xb_opcode_is_binding(op)) {
 					if (idx == idx_cnt++)
 						return op;
@@ -356,16 +356,16 @@ xb_query_parse_predicate(XbQuery *self,
 
 	/* repair or convert the indexed strings */
 	if (priv->flags & XB_QUERY_FLAG_USE_INDEXES) {
-		for (guint i = 0; i < xb_stack_get_size(opcodes); i++) {
-			XbOpcode *op = xb_stack_peek(opcodes, i);
+		for (guint i = 0; i < _xb_stack_get_size(opcodes); i++) {
+			XbOpcode *op = _xb_stack_peek(opcodes, i);
 			if (xb_opcode_get_kind(op) != XB_OPCODE_KIND_INDEXED_TEXT)
 				continue;
 			if (!xb_query_repair_opcode_texi(self, context, op, error))
 				return FALSE;
 		}
 	} else {
-		for (guint i = 0; i < xb_stack_get_size(opcodes); i++) {
-			XbOpcode *op = xb_stack_peek(opcodes, i);
+		for (guint i = 0; i < _xb_stack_get_size(opcodes); i++) {
+			XbOpcode *op = _xb_stack_peek(opcodes, i);
 			if (xb_opcode_get_kind(op) == XB_OPCODE_KIND_INDEXED_TEXT)
 				xb_opcode_set_kind(op, XB_OPCODE_KIND_TEXT);
 		}
