@@ -236,10 +236,10 @@ xb_opcode_cmp_val(XbOpcode *self)
  *
  * Since: 0.1.1
  **/
-inline gboolean
+gboolean
 xb_opcode_cmp_str(XbOpcode *self)
 {
-	return _xb_opcode_has_flag(self, XB_OPCODE_FLAG_TEXT);
+	return _xb_opcode_cmp_str(self);
 }
 
 /* private */

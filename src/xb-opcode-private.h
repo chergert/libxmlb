@@ -120,12 +120,24 @@ _xb_opcode_get_val(const XbOpcode *self)
 }
 
 static inline gboolean
-_xb_opcode_cmp_val(XbOpcode *self)
+_xb_opcode_cmp_val(const XbOpcode *self)
 {
 	return self->kind == XB_OPCODE_KIND_INTEGER || self->kind == XB_OPCODE_KIND_BOOLEAN ||
 	       self->kind == XB_OPCODE_KIND_INDEXED_TEXT ||
 	       self->kind == XB_OPCODE_KIND_BOUND_INDEXED_TEXT ||
 	       self->kind == XB_OPCODE_KIND_BOUND_INTEGER;
+}
+
+static inline gboolean
+_xb_opcode_cmp_str(const XbOpcode *self)
+{
+	return _xb_opcode_has_flag(self, XB_OPCODE_FLAG_TEXT);
+}
+
+static inline gboolean
+_xb_opcode_cmp_val_or_str(const XbOpcode *op)
+{
+	return _xb_opcode_cmp_str(op) || _xb_opcode_cmp_val(op);
 }
 
 static inline gboolean
