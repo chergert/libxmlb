@@ -15,7 +15,7 @@ G_BEGIN_DECLS
 typedef struct _XbStack XbStack;
 
 GType
-xb_stack_get_type(void);
+xb_stack_get_type(void) G_GNUC_CONST;
 gchar *
 xb_stack_to_string(XbStack *self);
 gboolean
