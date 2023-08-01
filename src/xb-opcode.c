@@ -310,9 +310,7 @@ xb_opcode_get_tokens(XbOpcode *self)
 void
 xb_opcode_clear(XbOpcode *self)
 {
-	if (self->destroy_func)
-		self->destroy_func(self->ptr);
-	self->destroy_func = NULL;
+  _xb_opcode_clear(self);
 }
 
 /**

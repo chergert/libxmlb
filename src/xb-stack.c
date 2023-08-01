@@ -29,7 +29,7 @@ xb_stack_unref(XbStack *self)
 	if (--self->ref > 0)
 		return;
 	for (guint i = 0; i < self->pos; i++)
-		xb_opcode_clear(&self->opcodes[i]);
+		_xb_opcode_clear(&self->opcodes[i]);
 	if (!self->stack_allocated)
 		g_free(self);
 }

@@ -146,6 +146,14 @@ _xb_opcode_is_binding(const XbOpcode *self)
 	return _xb_opcode_has_flag(self, XB_OPCODE_FLAG_BOUND);
 }
 
-G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(XbOpcode, xb_opcode_clear)
+static inline void
+_xb_opcode_clear(XbOpcode *self)
+{
+	if (self->destroy_func)
+		self->destroy_func(self->ptr);
+	self->destroy_func = NULL;
+}
+
+G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(XbOpcode, _xb_opcode_clear)
 
 G_END_DECLS
